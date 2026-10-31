@@ -1,0 +1,6 @@
+raw_record,rejected_reason
+"ESPRESSO, None, 3.0, 2",Name is  missing
+"latte,   Alice  , -4.0, 1",Invalid price: must be > 0
+"FLAT WHITE, Bob, 5.0, 10",Ivalid item count: must be 1-5
+"TIRAMISU, Emma, 6.5, 1",Item not in menu: 'TIRAMISU'
+"Americano, Sarah, 0.0, 1",Invalid price: must be > 0

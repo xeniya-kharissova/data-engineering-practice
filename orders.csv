@@ -1,0 +1,9 @@
+item_name,client_name,price,count
+  cappuccino  ,John,4.50,1
+ESPRESSO,,3.00,2
+latte,  Alice  ,-4.00,1
+FLAT WHITE,Bob,5.00,10
+TIRAMISU,Emma,6.50,1
+  Flat White  ,Michael,4.80,2
+Americano,Sarah,0.00,1
+CAPPUCCINO,David,bad_price,1
