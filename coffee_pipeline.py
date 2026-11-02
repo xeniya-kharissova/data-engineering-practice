@@ -3,56 +3,44 @@ import csv
 
 VALID_MENU = {"ESPRESSO", "AMERICANO", "CAPPUCCINO", "LATTE", "FLAT WHITE"}
 
-raw_orders = [
-    ("  cappuccino  ", "John", 4.50, 1),
-    ("ESPRESSO", None, 3.00, 2),                   # Сбой: пропущено имя (None)
-    ("latte", "  Alice  ", -4.00, 1),              # Сбой: отрицательная цена
-    ("FLAT WHITE", "Bob", 5.00, 10),               # Сбой: превышение лимита чашек
-    ("TIRAMISU", "Emma", 6.50, 1),                 # Сбой: позиция отсутствует в кофейном меню
-    ("  Flat White  ", "Michael", 4.80, 2),        # Валидная запись (требует нормализации)
-    ("Americano", "Sarah", 0.00, 1),               # Сбой: нулевая стоимость
-]
 
 def extract_orders_from_csv(file_path: str) -> list:
     raw_records = []
     with open(file_path, mode = "r", encoding = "utf-8") as file:
-        reader = csv.reader(file)
-
-        next(reader, None)
+        reader = csv.DictReader(file)
 
         for row in reader:
-            if not row:
+            if not row or not any(row.values()):
                 continue
             raw_records.append(row)
 
     return raw_records
 
 
-def transform_orders(records: list) ->tuple[list, list]:
+def transform_orders(records: list[dict]) ->tuple[list[tuple],list[tuple]]:
 
     rejected_records = []
     cleaned_records = []
 
-
     for item in records:
-        if len(item) != 4:
-            rejected_records.append((item, "Incorrect column count"))
-            continue
+        item_name = item.get("item_name")
+        client_name = item.get("client_name")
+        raw_price = item.get("price")
+        raw_count = item.get("count")
 
-        item_name, client_name, raw_price, raw_count = item
 
         if not item_name or not item_name.strip():
-            rejected_records.append((item, "Item name missing"))
+            rejected_records.append((item, "Item name is missing"))
             continue
 
         if not client_name or not client_name.strip():
-            rejected_records.append((item, "Name is  missing"))
+            rejected_records.append((item, "Client name is missing"))
             continue
 
         try:
             price = float(raw_price)
             count = int(raw_count)
-        except ValueError:
+        except (ValueError, TypeError):
             rejected_records.append((item, "Price or count  is not a valid number"))
             continue
 
@@ -75,14 +63,15 @@ def transform_orders(records: list) ->tuple[list, list]:
 
     return cleaned_records, rejected_records
 
-def save_dlq_to_csv(rejected_records: list, output_path: str):
+def save_dlq_to_csv(rejected_records: list[tuple], output_path: str) -> None:
+
     with open(output_path, mode = "w", encoding ="utf-8", newline = "") as file:
         writer = csv.writer(file) 
 
         writer.writerow(["raw_record", "rejected_reason"])
 
         for raw_item, reason in rejected_records:
-            record_str = ", ".join(str(field) for field in raw_item)
+            record_str = ", ".join(str(val) for val in raw_item.values())
             writer.writerow([record_str, reason])
 
 if __name__ == "__main__":
@@ -91,7 +80,7 @@ if __name__ == "__main__":
     error_file = "error.csv"
 
     print("=" * 60)
-    print("СТАРТ ОБРАБОТКИ ФАЙЛА ЗАКАЗОВ")
+    print("СТАРТ ОБРАБОТКИ ФАЙЛА ЗАКАЗОВ (DictReader)")
     print("=" * 60)
 
     #Extraction 
@@ -99,7 +88,7 @@ if __name__ == "__main__":
     print(f"1. [Extract] Прочитано строк из {input_file}: {len(raw_data)}")
 
     #Clean
-    valid, rejected = transform_orders(raw_orders)
+    valid, rejected = transform_orders(raw_data)
     print(f"2. [Transform] Успешно прошли проверку: {len(valid)} из {len(raw_data)}.")
     for records in valid:
         print(records)        
