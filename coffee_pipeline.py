@@ -1,8 +1,13 @@
 import csv
-
+from dataclasses import dataclass
 
 VALID_MENU = {"ESPRESSO", "AMERICANO", "CAPPUCCINO", "LATTE", "FLAT WHITE"}
-
+@dataclass
+class Orders:
+    item_name : str
+    client_name : str
+    price : float
+    count : int
 
 def extract_orders_from_csv(file_path: str) -> list:
     raw_records = []
@@ -17,13 +22,13 @@ def extract_orders_from_csv(file_path: str) -> list:
     return raw_records
 
 
-def transform_orders(records: list[dict]) ->tuple[list[tuple],list[tuple]]:
+def transform_orders(records: list[dict]) ->tuple[list[Orders],list[tuple]]:
 
     rejected_records = []
     cleaned_records = []
 
     for item in records:
-        item_name = item.get("item_name")
+        item_name = item.get("item_name")   
         client_name = item.get("client_name")
         raw_price = item.get("price")
         raw_count = item.get("count")
@@ -59,7 +64,7 @@ def transform_orders(records: list[dict]) ->tuple[list[tuple],list[tuple]]:
             rejected_records.append((item, f"Item not in menu: '{clean_item_name}'"))
             continue
 
-        cleaned_records.append((clean_item_name, clean_client_name, price, count))
+        cleaned_records.append((Orders(clean_item_name, clean_client_name, price, count)))
 
     return cleaned_records, rejected_records
 
@@ -89,9 +94,12 @@ if __name__ == "__main__":
 
     #Clean
     valid, rejected = transform_orders(raw_data)
+    total_price = 0
     print(f"2. [Transform] Успешно прошли проверку: {len(valid)} из {len(raw_data)}.")
-    for records in valid:
-        print(records)        
+    for order in valid:
+        print(order) 
+        total_price+=order.price
+    print(f"The total is: {total_price}")       
 
     #Save errors
     if rejected:
