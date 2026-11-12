@@ -1,9 +1,20 @@
 import csv
-
+from dataclasses import dataclass
+from collections.abc import Iterator
 
 VALID_MENU = {"ESPRESSO", "AMERICANO", "CAPPUCCINO", "LATTE", "FLAT WHITE"}
 
 
+@dataclass
+class Order:
+    item_name : str
+    client_name : str
+    price : float
+    count : int
+
+    def order_total_cost(self):
+        return self.price * self.count
+    
 def extract_orders_from_csv(file_path: str) -> list:
     raw_records = []
     with open(file_path, mode = "r", encoding = "utf-8") as file:
@@ -15,7 +26,9 @@ def extract_orders_from_csv(file_path: str) -> list:
             raw_records.append(row)
 
     return raw_records
-
+def validate_order(row : dict) -> tuple[Order | None, None | str]:
+        if not row["item_name"] and not row["item_name"].strip():
+            return (row, "Item name is missing")
 
 def transform_orders(records: list[dict]) ->tuple[list[tuple],list[tuple]]:
 
@@ -59,24 +72,30 @@ def transform_orders(records: list[dict]) ->tuple[list[tuple],list[tuple]]:
             rejected_records.append((item, f"Item not in menu: '{clean_item_name}'"))
             continue
 
-        cleaned_records.append((clean_item_name, clean_client_name, price, count))
+        cleaned_records.append(Order(clean_item_name, clean_client_name, price, count))
 
     return cleaned_records, rejected_records
-
+def save_orders_to_csv(cleaned_records : list, output_path : str) -> None:
+    with open(output_path, mode = "w", encoding = "utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=["item_name", "client_name", "price", "count"])
+        writer.writeheader()
+        for order in cleaned_records:
+            writer.writerow({"item_name":order.item_name, "client_name" : order.client_name, "price" : order.price, "count" : order.count})
+            
 def save_dlq_to_csv(rejected_records: list[tuple], output_path: str) -> None:
 
     with open(output_path, mode = "w", encoding ="utf-8", newline = "") as file:
-        writer = csv.writer(file) 
+        writer = csv.DictWriter(file, fieldnames= ["item_name", "client_name", "price", "count", "error_reason"]) 
 
-        writer.writerow(["raw_record", "rejected_reason"])
+        writer.writeheader()
 
         for raw_item, reason in rejected_records:
-            record_str = ", ".join(str(val) for val in raw_item.values())
-            writer.writerow([record_str, reason])
+            writer.writerow({**raw_item, "error_reason" : reason})
 
 if __name__ == "__main__":
 
     input_file = "orders.csv"
+    clean_file = "cleaned_orders.csv"
     error_file = "error.csv"
 
     print("=" * 60)
@@ -90,8 +109,15 @@ if __name__ == "__main__":
     #Clean
     valid, rejected = transform_orders(raw_data)
     print(f"2. [Transform] Успешно прошли проверку: {len(valid)} из {len(raw_data)}.")
-    for records in valid:
-        print(records)        
+    total_price = 0 
+    for order in valid:
+        print(order)
+        total_price+=order.order_total_cost()
+    print(f"The total price is: {total_price}")    
+
+    if valid:
+        save_orders_to_csv(valid, clean_file)
+        print(f"чистые заказы сохранены в файл: {clean_file}")    
 
     #Save errors
     if rejected:
