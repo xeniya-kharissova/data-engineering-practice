@@ -1,6 +1,7 @@
 import csv
 from dataclasses import dataclass
 from collections.abc import Iterator
+from collections import Counter, defaultdict
 
 VALID_MENU = {"ESPRESSO", "AMERICANO", "CAPPUCCINO", "LATTE", "FLAT WHITE"}
 
@@ -114,6 +115,9 @@ def validate_order(row : dict) -> tuple[Order | None, None | str]:
 
 def process_orders_pipeline(input_path : str, clean_path :str, error_path : str) -> dict:
     stats = {"total":0, "clean" : 0, "error" : 0, "revenue" : 0}
+    drinks_sold = Counter()
+    revenue_by_client = defaultdict(float)
+    error_reasons = Counter()
     with open(clean_path, mode = "w", encoding="utf-8", newline="") as clean_file, open (error_path, mode = "w", encoding="utf-8",newline="") as error_file:
         c_writer = csv.DictWriter(clean_file, fieldnames=["item_name", "client_name", "price", "count"])
         e_writer = csv.DictWriter(error_file, fieldnames=["item_name", "client_name", "price", "count", "error_reason"])
@@ -124,11 +128,18 @@ def process_orders_pipeline(input_path : str, clean_path :str, error_path : str)
             order, reason = validate_order(raw_row)
             if order:
                 stats["clean"]+=1
-                stats["revenue"]+=order.order_total_cost()
+                drinks_sold[order.item_name]+=order.count
+                order_cost = order.order_total_cost()
+                revenue_by_client[order.client_name]+=order_cost
+                stats["revenue"]+=order_cost
                 c_writer.writerow({"item_name" : order.item_name, "client_name" : order.client_name, "price" : order.price, "count" : order.count})
             else:
                 stats["error"] +=1
+                error_reasons[reason]+=1
                 e_writer.writerow({**raw_row, "error_reason" : reason})
+    stats["top_drinks"] = drinks_sold.most_common()
+    stats["revenue_by_client"] = dict(revenue_by_client)
+    stats["error_reasons"] = error_reasons.most_common()
     return stats
 
 
