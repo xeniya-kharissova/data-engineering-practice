@@ -363,7 +363,68 @@ if __name__ == "__main__":
     print("=" * 60)
 
 
+#старый удаленный кусочек из coffee_pipe;ine.py который мне жалко удалять 
+# def transform_orders(records: list[dict]) ->tuple[list[Order],list[tuple]]:
 
+#     rejected_records = []
+#     cleaned_records = []
+
+#     for item in records:
+#         item_name = item.get("item_name")   
+#         client_name = item.get("client_name")
+#         raw_price = item.get("price")
+#         raw_count = item.get("count")
+
+
+#         if not item_name or not item_name.strip():
+#             rejected_records.append((item, "Item name is missing"))
+#             continue
+
+#         if not client_name or not client_name.strip():
+#             rejected_records.append((item, "Client name is missing"))
+#             continue
+
+#         try:
+#             price = float(raw_price)
+#             count = int(raw_count)
+#         except (ValueError, TypeError):
+#             rejected_records.append((item, "Price or count  is not a valid number"))
+#             continue
+
+#         if price <= 0:
+#             rejected_records.append((item, "Invalid price: must be > 0"))
+#             continue
+
+#         if count <1 or count >5:
+#             rejected_records.append((item, "Ivalid item count: must be 1-5"))
+#             continue
+
+#         clean_item_name = item_name.strip().upper()
+#         clean_client_name = client_name.strip()
+
+#         if clean_item_name not in VALID_MENU:
+#             rejected_records.append((item, f"Item not in menu: '{clean_item_name}'"))
+#             continue
+
+#         cleaned_records.append(Order(clean_item_name, clean_client_name, price, count))
+
+    # return cleaned_records, rejected_records
+# def save_orders_to_csv(cleaned_records : list, output_path : str) -> None:
+#     with open(output_path, mode = "w", encoding = "utf-8", newline="") as file:
+#         writer = csv.DictWriter(file, fieldnames=["item_name", "client_name", "price", "count"])
+#         writer.writeheader()
+#         for order in cleaned_records:
+#             writer.writerow({"item_name":order.item_name, "client_name" : order.client_name, "price" : order.price, "count" : order.count})
+            
+# def save_dlq_to_csv(rejected_records: list[tuple], output_path: str) -> None:
+
+#     with open(output_path, mode = "w", encoding ="utf-8", newline = "") as file:
+#         writer = csv.DictWriter(file, fieldnames= ["item_name", "client_name", "price", "count", "error_reason"]) 
+
+#         writer.writeheader()
+
+#         for raw_item, reason in rejected_records:
+#             writer.writerow({**raw_item, "error_reason" : reason})
 
 
 
