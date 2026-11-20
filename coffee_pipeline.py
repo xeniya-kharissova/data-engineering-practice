@@ -2,6 +2,8 @@ import csv
 from dataclasses import dataclass
 from collections.abc import Iterator
 from collections import Counter, defaultdict
+import time 
+from functools import wraps
 
 VALID_MENU = {"ESPRESSO", "AMERICANO", "CAPPUCCINO", "LATTE", "FLAT WHITE"}
 
@@ -49,70 +51,38 @@ def validate_order(row : dict) -> tuple[Order | None, None | str]:
             return (None, "Amount of cups must be beyween 1 and 5")
         order = Order(item_name, client_name, price, count)
         return (order, None)
+   
+def measure_time(func):
+    @wraps(func)   
+    def wrapper(*args,**kwargs):
+        start = time.perf_counter()
+        try:
+            result = func(*args,**kwargs)
+            return result
+        finally:
+            elapsed = time.perf_counter() - start
+            print(f"[TIME] {func.__name__} выполнилась за {elapsed:.4f} сек.")
         
-
-# def transform_orders(records: list[dict]) ->tuple[list[Order],list[tuple]]:
-
-#     rejected_records = []
-#     cleaned_records = []
-
-#     for item in records:
-#         item_name = item.get("item_name")   
-#         client_name = item.get("client_name")
-#         raw_price = item.get("price")
-#         raw_count = item.get("count")
+    return wrapper
 
 
-#         if not item_name or not item_name.strip():
-#             rejected_records.append((item, "Item name is missing"))
-#             continue
-
-#         if not client_name or not client_name.strip():
-#             rejected_records.append((item, "Client name is missing"))
-#             continue
-
-#         try:
-#             price = float(raw_price)
-#             count = int(raw_count)
-#         except (ValueError, TypeError):
-#             rejected_records.append((item, "Price or count  is not a valid number"))
-#             continue
-
-#         if price <= 0:
-#             rejected_records.append((item, "Invalid price: must be > 0"))
-#             continue
-
-#         if count <1 or count >5:
-#             rejected_records.append((item, "Ivalid item count: must be 1-5"))
-#             continue
-
-#         clean_item_name = item_name.strip().upper()
-#         clean_client_name = client_name.strip()
-
-#         if clean_item_name not in VALID_MENU:
-#             rejected_records.append((item, f"Item not in menu: '{clean_item_name}'"))
-#             continue
-
-#         cleaned_records.append(Order(clean_item_name, clean_client_name, price, count))
-
-    # return cleaned_records, rejected_records
-# def save_orders_to_csv(cleaned_records : list, output_path : str) -> None:
-#     with open(output_path, mode = "w", encoding = "utf-8", newline="") as file:
-#         writer = csv.DictWriter(file, fieldnames=["item_name", "client_name", "price", "count"])
-#         writer.writeheader()
-#         for order in cleaned_records:
-#             writer.writerow({"item_name":order.item_name, "client_name" : order.client_name, "price" : order.price, "count" : order.count})
-            
-# def save_dlq_to_csv(rejected_records: list[tuple], output_path: str) -> None:
-
-#     with open(output_path, mode = "w", encoding ="utf-8", newline = "") as file:
-#         writer = csv.DictWriter(file, fieldnames= ["item_name", "client_name", "price", "count", "error_reason"]) 
-
-#         writer.writeheader()
-
-#         for raw_item, reason in rejected_records:
-#             writer.writerow({**raw_item, "error_reason" : reason})
-
+def retry(retries : int = 3, delay : float = 1):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for trial in range(retries):
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    print(f"[UNEXPECTED ERROR] | [TRIAL] : {trial+1} | [REASON] : {e}")
+                    if trial+1 == retries : raise
+                    time.sleep(delay)
+        return wrapper
+    return decorator
+    
+@measure_time   
+@retry(retries=3, delay=0.5)
 def process_orders_pipeline(input_path : str, clean_path :str, error_path : str) -> dict:
     stats = {"total":0, "clean" : 0, "error" : 0, "revenue" : 0}
     drinks_sold = Counter()
@@ -154,7 +124,7 @@ if __name__ == "__main__":
     print("СТАРТ ОБРАБОТКИ ФАЙЛА ЗАКАЗОВ (DictReader)")
     print("=" * 60)
     print(process_orders_pipeline(input_file, clean_file, error_file))
-
+    print("Имя функции:", process_orders_pipeline.__name__)
 
 
 
